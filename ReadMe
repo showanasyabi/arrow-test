@@ -1,0 +1,5 @@
+1) cd build
+2) copy the dataset and rename it to test.csv
+3) cmake ..
+4) make 
+5) ./test.o

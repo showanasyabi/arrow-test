@@ -1,0 +1,6 @@
+cmake_minimum_required(VERSION 3.0)
+project(test)
+find_package(Arrow REQUIRED)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}  -m64 -Ofast -flto -march=native -funroll-loops -Wall -Wno-unused-function")
+add_executable(test.o test.cc)
+target_link_libraries(test.o PRIVATE arrow_shared)
