@@ -47,12 +47,12 @@ using arrow::Status;
 
 
 
-void query2 ( const std::shared_ptr<arrow::Table>& table){
+void vectorized_chunked_arrow( const std::shared_ptr<arrow::Table>& table){
 
 auto t1 = std::chrono::high_resolution_clock::now();
 
 int16_t male_age = 0 , female_age = 0 , unknown_age = 0;
-int64_t result[4]={0,0,0,0};
+double result[4]={0,0,0,0};
 int counter =0 ;
 //std::cout<< *table->schema() << std::endl;
 arrow::ChunkedArray* c0p = table->column(0).get();
@@ -127,10 +127,43 @@ for (int64_t i = length_rounded; i < length; ++i) {
 }
 auto t2 = std::chrono::high_resolution_clock::now();
 auto duration = std::chrono::duration_cast<std::chrono::microseconds>( t2 - t1 ).count();
-std::cout << "exe time: " << duration << std::endl;
+std::cout << "exe time: of Vectorized chunked arrow:  " << duration << std::endl;
 std::cout<< " male: " << result[1] << std::endl;
 std::cout<< "female: " << result[2] << std::endl;
 std::cout<< " unknown: " << result[0] << std::endl;
+}
+
+
+void  vectorized_arrow ( const std::shared_ptr<arrow::Table>& table){
+
+auto t1 = std::chrono::high_resolution_clock::now();
+double  male_age = 0 , female_age = 0 , unknown_age = 0;
+arrow::ChunkedArray* c0p = table->column(0).get();
+for (int j= 0; j < table->column(0)->num_chunks(); j++){
+auto sex =
+    std::static_pointer_cast<arrow::StringArray>(table->column(11)->chunk(j)); // sex
+auto ages =
+    std::static_pointer_cast<arrow::DoubleArray>(table->column(12)->chunk(j)); // age
+ 
+   const auto age_values = ages->raw_values();
+for (int i=0; i< c0p->chunk(j)->length(); i++)
+{
+    if (sex->GetString(i) == "Male")
+       male_age +=age_values[i];
+    else if (sex->GetString(i) == "Female")
+        female_age+=age_values[i];
+    else 
+       unknown_age += age_values[i];
+}
+}
+auto t2 = std::chrono::high_resolution_clock::now();
+auto duration = std::chrono::duration_cast<std::chrono::microseconds>( t2 - t1 ).count();
+std::cout << "exe time of vectorized  arrow :" << duration << std::endl;
+std::cout<< " male: " << male_age << std::endl;
+std::cout<< "female: " << female_age << std::endl;
+std::cout<< " unknown: " << unknown_age << std::endl;
+//std::cout<< counter << std::endl;
+
 }
 
 
@@ -152,9 +185,10 @@ Status Readfile(int argc, char** argv) {
                                     arrow::csv::ParseOptions::Defaults(),
                                     arrow::csv::ConvertOptions::Defaults()));
   ARROW_ASSIGN_OR_RAISE(auto table, csv_reader->Read());
-// call query whih table
-  query2(table); 
-
+// execute the query for chunked approach
+vectorized_chunked_arrow(table);
+// execute the query for vectorized approach
+vectorized_arrow(table);
   return Status::OK();
 }
 
